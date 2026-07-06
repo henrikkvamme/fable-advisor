@@ -75,6 +75,7 @@ reset_fake_claude() {
   : > "$tmp_dir/claude-stdin"
   : > "$tmp_dir/claude-key"
   : > "$tmp_dir/op-args"
+  rm -rf "$HOME/.config/fable-advisor" "$HOME/.config/fish"
 }
 
 cat > "$tmp_dir/bin/claude" <<'FAKE_CLAUDE'
@@ -150,6 +151,15 @@ test_model_and_effort_env_override_defaults() {
   FABLE_ADVISOR_MODEL=test-model FABLE_ADVISOR_EFFORT=low "$repo_dir/bin/fable-advisor" "Check env" >/dev/null
   assert_arg_value "model env is passed" "$FABLE_ADVISOR_TEST_ARGS" "--model" "test-model"
   assert_arg_value "effort env is passed" "$FABLE_ADVISOR_TEST_ARGS" "--effort" "low"
+}
+
+test_default_env_file_supplies_anthropic_api_key() {
+  reset_fake_claude
+  mkdir -p "$HOME/.config/fable-advisor"
+  printf 'ANTHROPIC_API_KEY=env_file_test_key\n' > "$HOME/.config/fable-advisor/secrets.env"
+  env -u ANTHROPIC_API_KEY FABLE_ADVISOR_SECRETS_FILE="$tmp_dir/missing-secrets.fish" "$repo_dir/bin/fable-advisor" "Check env file key" >/dev/null
+  assert_eq "default env file supplies api key" "env_file_test_key" "$(cat "$FABLE_ADVISOR_TEST_KEY")"
+  assert_eq "default env file avoids op" "" "$(cat "$FABLE_ADVISOR_TEST_OP_ARGS")"
 }
 
 test_fish_secret_file_supplies_anthropic_api_key() {
@@ -232,6 +242,7 @@ test_piped_context_is_sent_with_prompt
 test_transcript_file_is_included_explicitly
 test_model_and_effort_flags_override_defaults
 test_model_and_effort_env_override_defaults
+test_default_env_file_supplies_anthropic_api_key
 test_fish_secret_file_supplies_anthropic_api_key
 test_custom_secret_file_supplies_anthropic_api_key
 test_onepassword_supplies_anthropic_api_key

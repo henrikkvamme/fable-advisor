@@ -28,7 +28,16 @@ fable-advisor "Reply with exactly: ok"
 
 The installer copies the CLI to `~/.local/bin/fable-advisor` and the skill to `~/.agents/skills/fable-advisor`.
 
-If `ANTHROPIC_API_KEY` is not set, `fable-advisor` tries 1Password:
+To avoid repeated secret manager prompts, keep a local untracked env file:
+
+```sh
+mkdir -p ~/.config/fable-advisor
+chmod 700 ~/.config/fable-advisor
+printf 'ANTHROPIC_API_KEY=...\n' > ~/.config/fable-advisor/secrets.env
+chmod 600 ~/.config/fable-advisor/secrets.env
+```
+
+If no env var or local env file is present, `fable-advisor` tries 1Password:
 
 ```sh
 op://Agent Access/Anthropic API Key/credential
@@ -52,6 +61,7 @@ Useful overrides:
 
 ```sh
 FABLE_ADVISOR_MODEL=claude-fable-5 FABLE_ADVISOR_EFFORT=xhigh fable-advisor "Review this."
+FABLE_ADVISOR_ENV_FILE="$HOME/.config/fable-advisor/secrets.env" fable-advisor "Review this."
 FABLE_ADVISOR_ANTHROPIC_REF="op://Personal/Anthropic API Key/credential" fable-advisor "Review this."
 FABLE_ADVISOR_OP_COMMAND=/opt/homebrew/bin/op FABLE_ADVISOR_CLAUDE_COMMAND="$HOME/.local/bin/claude" fable-advisor "Review this."
 FABLE_ADVISOR_SECRETS_FILE="$HOME/.config/fish/conf.d/secrets.fish" fable-advisor "Review this."

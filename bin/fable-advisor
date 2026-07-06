@@ -1,6 +1,29 @@
 #!/bin/sh
 set -eu
 
+env_file=${FABLE_ADVISOR_ENV_FILE:-"$HOME/.config/fable-advisor/secrets.env"}
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$env_file" ]; then
+  anthropic_api_key=$(
+    awk -F= '
+      $1 == "ANTHROPIC_API_KEY" {
+        sub(/^[^=]*=/, "")
+        print
+        exit
+      }
+      $1 == "export ANTHROPIC_API_KEY" {
+        sub(/^[^=]*=/, "")
+        print
+        exit
+      }
+    ' "$env_file"
+  )
+  if [ -n "$anthropic_api_key" ]; then
+    export ANTHROPIC_API_KEY=$anthropic_api_key
+  fi
+  unset anthropic_api_key
+fi
+unset env_file
+
 secrets_file=${FABLE_ADVISOR_SECRETS_FILE:-"$HOME/.config/fish/conf.d/secrets.fish"}
 if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
   anthropic_api_key=$(

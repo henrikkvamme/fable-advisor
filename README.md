@@ -53,6 +53,7 @@ Useful overrides:
 ```sh
 FABLE_ADVISOR_MODEL=claude-fable-5 FABLE_ADVISOR_EFFORT=xhigh fable-advisor "Review this."
 FABLE_ADVISOR_ANTHROPIC_REF="op://Personal/Anthropic API Key/credential" fable-advisor "Review this."
+FABLE_ADVISOR_OP_COMMAND=/opt/homebrew/bin/op FABLE_ADVISOR_CLAUDE_COMMAND="$HOME/.local/bin/claude" fable-advisor "Review this."
 FABLE_ADVISOR_SECRETS_FILE="$HOME/.config/fish/conf.d/secrets.fish" fable-advisor "Review this."
 ```
 

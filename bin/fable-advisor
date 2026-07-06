@@ -22,14 +22,36 @@ if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
 fi
 unset secrets_file
 
-if [ -z "${ANTHROPIC_API_KEY:-}" ] && command -v op >/dev/null 2>&1; then
+find_command() {
+  env_name=$1
+  binary_name=$2
+  fallback_path=$3
+  env_value=$(eval "printf '%s' \"\${$env_name:-}\"")
+  if [ -n "$env_value" ]; then
+    printf "%s\n" "$env_value"
+    return 0
+  fi
+  if command -v "$binary_name" >/dev/null 2>&1; then
+    command -v "$binary_name"
+    return 0
+  fi
+  if [ -x "$fallback_path" ]; then
+    printf "%s\n" "$fallback_path"
+    return 0
+  fi
+  return 1
+}
+
+op_cmd=$(find_command FABLE_ADVISOR_OP_COMMAND op /opt/homebrew/bin/op || true)
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -n "$op_cmd" ]; then
   op_secret_ref=${FABLE_ADVISOR_ANTHROPIC_REF:-"op://Agent Access/Anthropic API Key/credential"}
-  anthropic_api_key=$(op read "$op_secret_ref" 2>/dev/null || true)
+  anthropic_api_key=$("$op_cmd" read "$op_secret_ref" 2>/dev/null || true)
   if [ -n "$anthropic_api_key" ]; then
     export ANTHROPIC_API_KEY=$anthropic_api_key
   fi
   unset anthropic_api_key op_secret_ref
 fi
+unset op_cmd
 
 model="${FABLE_ADVISOR_MODEL:-claude-fable-5}"
 effort="${FABLE_ADVISOR_EFFORT:-xhigh}"
@@ -113,13 +135,14 @@ if [ -z "$prompt" ] && [ -z "$input" ] && [ -z "$transcript" ]; then
   exit 2
 fi
 
-if ! command -v claude >/dev/null 2>&1; then
+claude_cmd=$(find_command FABLE_ADVISOR_CLAUDE_COMMAND claude "$HOME/.local/bin/claude" || true)
+if [ -z "$claude_cmd" ]; then
   echo "fable-advisor: claude CLI not found" >&2
   exit 127
 fi
 
 run_claude() {
-  claude \
+  "$claude_cmd" \
     --bare \
     --setting-sources local \
     --model "$model" \

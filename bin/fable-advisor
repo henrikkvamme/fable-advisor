@@ -22,6 +22,15 @@ if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
 fi
 unset secrets_file
 
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && command -v op >/dev/null 2>&1; then
+  op_secret_ref=${FABLE_ADVISOR_ANTHROPIC_REF:-"op://Agent Access/Anthropic API Key/credential"}
+  anthropic_api_key=$(op read "$op_secret_ref" 2>/dev/null || true)
+  if [ -n "$anthropic_api_key" ]; then
+    export ANTHROPIC_API_KEY=$anthropic_api_key
+  fi
+  unset anthropic_api_key op_secret_ref
+fi
+
 model="${FABLE_ADVISOR_MODEL:-claude-fable-5}"
 effort="${FABLE_ADVISOR_EFFORT:-xhigh}"
 advisor_prompt="You are Claude Fable 5 acting as an independent advisor for a coding agent. Be skeptical and concise. Focus on correctness risks, hidden assumptions, missing verification, security/privacy issues, and simpler alternatives. Do not rewrite the whole solution unless asked; return actionable advice."

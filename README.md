@@ -28,6 +28,12 @@ fable-advisor "Reply with exactly: ok"
 
 The installer copies the CLI to `~/.local/bin/fable-advisor` and the skill to `~/.agents/skills/fable-advisor`.
 
+If `ANTHROPIC_API_KEY` is not set, `fable-advisor` tries 1Password:
+
+```sh
+op://Agent Access/Anthropic API Key/credential
+```
+
 For OpenCode's config directory:
 
 ```sh
@@ -46,6 +52,7 @@ Useful overrides:
 
 ```sh
 FABLE_ADVISOR_MODEL=claude-fable-5 FABLE_ADVISOR_EFFORT=xhigh fable-advisor "Review this."
+FABLE_ADVISOR_ANTHROPIC_REF="op://Personal/Anthropic API Key/credential" fable-advisor "Review this."
 FABLE_ADVISOR_SECRETS_FILE="$HOME/.config/fish/conf.d/secrets.fish" fable-advisor "Review this."
 ```
 

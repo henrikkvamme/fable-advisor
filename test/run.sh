@@ -74,6 +74,7 @@ reset_fake_claude() {
   : > "$tmp_dir/claude-args"
   : > "$tmp_dir/claude-stdin"
   : > "$tmp_dir/claude-key"
+  : > "$tmp_dir/op-args"
 }
 
 cat > "$tmp_dir/bin/claude" <<'FAKE_CLAUDE'
@@ -85,12 +86,24 @@ printf "fake-advice\n"
 FAKE_CLAUDE
 chmod +x "$tmp_dir/bin/claude"
 
+cat > "$tmp_dir/bin/op" <<'FAKE_OP'
+#!/bin/sh
+printf '%s\n' "$@" > "$FABLE_ADVISOR_TEST_OP_ARGS"
+if [ "$1" = "read" ]; then
+  printf "op_test_key\n"
+  exit 0
+fi
+exit 1
+FAKE_OP
+chmod +x "$tmp_dir/bin/op"
+
 PATH="$tmp_dir/bin:$PATH"
 HOME="$tmp_dir/home"
 FABLE_ADVISOR_TEST_ARGS="$tmp_dir/claude-args"
 FABLE_ADVISOR_TEST_STDIN="$tmp_dir/claude-stdin"
 FABLE_ADVISOR_TEST_KEY="$tmp_dir/claude-key"
-export PATH HOME FABLE_ADVISOR_TEST_ARGS FABLE_ADVISOR_TEST_STDIN FABLE_ADVISOR_TEST_KEY
+FABLE_ADVISOR_TEST_OP_ARGS="$tmp_dir/op-args"
+export PATH HOME FABLE_ADVISOR_TEST_ARGS FABLE_ADVISOR_TEST_STDIN FABLE_ADVISOR_TEST_KEY FABLE_ADVISOR_TEST_OP_ARGS
 
 test_plain_prompt_uses_stateless_advisor_defaults() {
   reset_fake_claude
@@ -155,6 +168,13 @@ test_custom_secret_file_supplies_anthropic_api_key() {
   assert_eq "custom secret file supplies api key" "custom_test_key" "$(cat "$FABLE_ADVISOR_TEST_KEY")"
 }
 
+test_onepassword_supplies_anthropic_api_key() {
+  reset_fake_claude
+  env -u ANTHROPIC_API_KEY FABLE_ADVISOR_SECRETS_FILE="$tmp_dir/missing-secrets.fish" "$repo_dir/bin/fable-advisor" "Check op key" >/dev/null
+  assert_eq "1password supplies api key" "op_test_key" "$(cat "$FABLE_ADVISOR_TEST_KEY")"
+  assert_arg_value "1password default reference is used" "$FABLE_ADVISOR_TEST_OP_ARGS" "read" "op://Agent Access/Anthropic API Key/credential"
+}
+
 test_empty_request_exits_before_calling_claude() {
   reset_fake_claude
   if "$repo_dir/bin/fable-advisor" > "$tmp_dir/empty-out" 2> "$tmp_dir/empty-err"; then
@@ -214,6 +234,7 @@ test_model_and_effort_flags_override_defaults
 test_model_and_effort_env_override_defaults
 test_fish_secret_file_supplies_anthropic_api_key
 test_custom_secret_file_supplies_anthropic_api_key
+test_onepassword_supplies_anthropic_api_key
 test_empty_request_exits_before_calling_claude
 test_missing_transcript_exits_before_calling_claude
 test_help_prints_usage_without_calling_claude

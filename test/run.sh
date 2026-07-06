@@ -187,6 +187,16 @@ test_help_prints_usage_without_calling_claude() {
   assert_eq "help does not call claude" "" "$(cat "$FABLE_ADVISOR_TEST_ARGS")"
 }
 
+test_help_works_without_claude_on_path() {
+  reset_fake_claude
+  set +e
+  output=$(PATH="/usr/bin:/bin" "$repo_dir/bin/fable-advisor" --help 2>&1)
+  status=$?
+  set -e
+  assert_eq "help without claude exits success" "0" "$status"
+  assert_contains "help without claude includes usage" "$output" "Usage: fable-advisor"
+}
+
 test_installer_copies_cli_and_skill_to_configurable_locations() {
   install_prefix="$tmp_dir/install-prefix"
   skills_dir="$tmp_dir/skills"
@@ -207,6 +217,7 @@ test_custom_secret_file_supplies_anthropic_api_key
 test_empty_request_exits_before_calling_claude
 test_missing_transcript_exits_before_calling_claude
 test_help_prints_usage_without_calling_claude
+test_help_works_without_claude_on_path
 test_installer_copies_cli_and_skill_to_configurable_locations
 
 if [ "$fail_count" -gt 0 ]; then

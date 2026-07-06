@@ -1,11 +1,6 @@
 #!/bin/sh
 set -eu
 
-if ! command -v claude >/dev/null 2>&1; then
-  echo "fable-advisor: claude CLI not found" >&2
-  exit 127
-fi
-
 secrets_file=${FABLE_ADVISOR_SECRETS_FILE:-"$HOME/.config/fish/conf.d/secrets.fish"}
 if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
   anthropic_api_key=$(
@@ -107,6 +102,11 @@ fi
 if [ -z "$prompt" ] && [ -z "$input" ] && [ -z "$transcript" ]; then
   usage
   exit 2
+fi
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "fable-advisor: claude CLI not found" >&2
+  exit 127
 fi
 
 run_claude() {

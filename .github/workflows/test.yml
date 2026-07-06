@@ -10,6 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Syntax check
-        run: sh -n bin/ccf install.sh test/run.sh
+        run: sh -n bin/fable-advisor install.sh test/run.sh
       - name: Behavior tests
         run: sh test/run.sh

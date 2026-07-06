@@ -2,11 +2,11 @@
 set -eu
 
 if ! command -v claude >/dev/null 2>&1; then
-  echo "ccf: claude CLI not found" >&2
+  echo "fable-advisor: claude CLI not found" >&2
   exit 127
 fi
 
-secrets_file=${CCF_SECRETS_FILE:-"$HOME/.config/fish/conf.d/secrets.fish"}
+secrets_file=${FABLE_ADVISOR_SECRETS_FILE:-"$HOME/.config/fish/conf.d/secrets.fish"}
 if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
   anthropic_api_key=$(
     awk '
@@ -27,13 +27,13 @@ if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
 fi
 unset secrets_file
 
-model="${CC_ADVISOR_MODEL:-claude-fable-5}"
-effort="${CC_ADVISOR_EFFORT:-xhigh}"
-advisor_prompt="You are Claude Fable 5 acting as an independent advisor for a Codex coding agent. Be skeptical and concise. Focus on correctness risks, hidden assumptions, missing verification, security/privacy issues, and simpler alternatives. Do not rewrite the whole solution unless asked; return actionable advice."
+model="${FABLE_ADVISOR_MODEL:-claude-fable-5}"
+effort="${FABLE_ADVISOR_EFFORT:-xhigh}"
+advisor_prompt="You are Claude Fable 5 acting as an independent advisor for a coding agent. Be skeptical and concise. Focus on correctness risks, hidden assumptions, missing verification, security/privacy issues, and simpler alternatives. Do not rewrite the whole solution unless asked; return actionable advice."
 
 usage() {
-  echo "Usage: ccf [--model MODEL] [--effort LEVEL] [--transcript FILE] <prompt>" >&2
-  echo "       command | ccf [options] <prompt>" >&2
+  echo "Usage: fable-advisor [--model MODEL] [--effort LEVEL] [--transcript FILE] <prompt>" >&2
+  echo "       command | fable-advisor [options] <prompt>" >&2
 }
 
 transcript_file=""
@@ -41,7 +41,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --transcript)
       if [ "$#" -lt 2 ]; then
-        echo "ccf: --transcript requires a file path" >&2
+        echo "fable-advisor: --transcript requires a file path" >&2
         exit 2
       fi
       transcript_file=$2
@@ -53,7 +53,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --model)
       if [ "$#" -lt 2 ]; then
-        echo "ccf: --model requires a value" >&2
+        echo "fable-advisor: --model requires a value" >&2
         exit 2
       fi
       model=$2
@@ -65,7 +65,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --effort)
       if [ "$#" -lt 2 ]; then
-        echo "ccf: --effort requires a value" >&2
+        echo "fable-advisor: --effort requires a value" >&2
         exit 2
       fi
       effort=$2
@@ -90,7 +90,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -n "$transcript_file" ] && [ ! -r "$transcript_file" ]; then
-  echo "ccf: cannot read transcript: $transcript_file" >&2
+  echo "fable-advisor: cannot read transcript: $transcript_file" >&2
   exit 2
 fi
 

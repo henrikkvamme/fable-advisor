@@ -2,7 +2,7 @@
 set -eu
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-tmp_dir="${TMPDIR:-/tmp}/ccf-test-$$"
+tmp_dir="${TMPDIR:-/tmp}/fable-advisor-test-$$"
 
 pass_count=0
 fail_count=0
@@ -78,120 +78,120 @@ reset_fake_claude() {
 
 cat > "$tmp_dir/bin/claude" <<'FAKE_CLAUDE'
 #!/bin/sh
-printf '%s\n' "$@" > "$CCF_TEST_ARGS"
-printf '%s' "${ANTHROPIC_API_KEY:-}" > "$CCF_TEST_KEY"
-cat > "$CCF_TEST_STDIN"
+printf '%s\n' "$@" > "$FABLE_ADVISOR_TEST_ARGS"
+printf '%s' "${ANTHROPIC_API_KEY:-}" > "$FABLE_ADVISOR_TEST_KEY"
+cat > "$FABLE_ADVISOR_TEST_STDIN"
 printf "fake-advice\n"
 FAKE_CLAUDE
 chmod +x "$tmp_dir/bin/claude"
 
 PATH="$tmp_dir/bin:$PATH"
 HOME="$tmp_dir/home"
-CCF_TEST_ARGS="$tmp_dir/claude-args"
-CCF_TEST_STDIN="$tmp_dir/claude-stdin"
-CCF_TEST_KEY="$tmp_dir/claude-key"
-export PATH HOME CCF_TEST_ARGS CCF_TEST_STDIN CCF_TEST_KEY
+FABLE_ADVISOR_TEST_ARGS="$tmp_dir/claude-args"
+FABLE_ADVISOR_TEST_STDIN="$tmp_dir/claude-stdin"
+FABLE_ADVISOR_TEST_KEY="$tmp_dir/claude-key"
+export PATH HOME FABLE_ADVISOR_TEST_ARGS FABLE_ADVISOR_TEST_STDIN FABLE_ADVISOR_TEST_KEY
 
 test_plain_prompt_uses_stateless_advisor_defaults() {
   reset_fake_claude
-  output=$("$repo_dir/bin/ccf" "Review this plan")
+  output=$("$repo_dir/bin/fable-advisor" "Review this plan")
   assert_eq "plain prompt returns claude output" "fake-advice" "$output"
-  assert_file_contains "plain prompt uses bare mode" "$CCF_TEST_ARGS" "--bare"
-  assert_file_contains "plain prompt ignores user settings" "$CCF_TEST_ARGS" "--setting-sources"
-  assert_arg_value "plain prompt uses fable model" "$CCF_TEST_ARGS" "--model" "claude-fable-5"
-  assert_arg_value "plain prompt uses xhigh effort" "$CCF_TEST_ARGS" "--effort" "xhigh"
-  assert_file_contains "plain prompt disables tools" "$CCF_TEST_ARGS" "--tools"
-  assert_file_contains "plain prompt is printed directly" "$CCF_TEST_ARGS" "Review this plan"
+  assert_file_contains "plain prompt uses bare mode" "$FABLE_ADVISOR_TEST_ARGS" "--bare"
+  assert_file_contains "plain prompt ignores user settings" "$FABLE_ADVISOR_TEST_ARGS" "--setting-sources"
+  assert_arg_value "plain prompt uses fable model" "$FABLE_ADVISOR_TEST_ARGS" "--model" "claude-fable-5"
+  assert_arg_value "plain prompt uses xhigh effort" "$FABLE_ADVISOR_TEST_ARGS" "--effort" "xhigh"
+  assert_file_contains "plain prompt disables tools" "$FABLE_ADVISOR_TEST_ARGS" "--tools"
+  assert_file_contains "plain prompt is printed directly" "$FABLE_ADVISOR_TEST_ARGS" "Review this plan"
 }
 
 test_piped_context_is_sent_with_prompt() {
   reset_fake_claude
-  output=$(printf "diff --git a/app b/app\n+fixed bug\n" | "$repo_dir/bin/ccf" "Review this diff")
+  output=$(printf "diff --git a/app b/app\n+fixed bug\n" | "$repo_dir/bin/fable-advisor" "Review this diff")
   assert_eq "piped context returns claude output" "fake-advice" "$output"
-  assert_file_contains "piped context includes prompt" "$CCF_TEST_STDIN" "Review this diff"
-  assert_file_contains "piped context has context heading" "$CCF_TEST_STDIN" "## Context"
-  assert_file_contains "piped context includes stdin" "$CCF_TEST_STDIN" "+fixed bug"
+  assert_file_contains "piped context includes prompt" "$FABLE_ADVISOR_TEST_STDIN" "Review this diff"
+  assert_file_contains "piped context has context heading" "$FABLE_ADVISOR_TEST_STDIN" "## Context"
+  assert_file_contains "piped context includes stdin" "$FABLE_ADVISOR_TEST_STDIN" "+fixed bug"
 }
 
 test_transcript_file_is_included_explicitly() {
   reset_fake_claude
   transcript="$tmp_dir/session.jsonl"
   printf '{"role":"user","content":"original requirement"}\n' > "$transcript"
-  output=$("$repo_dir/bin/ccf" --transcript "$transcript" "Check dropped requirements")
+  output=$("$repo_dir/bin/fable-advisor" --transcript "$transcript" "Check dropped requirements")
   assert_eq "transcript returns claude output" "fake-advice" "$output"
-  assert_file_contains "transcript includes prompt" "$CCF_TEST_STDIN" "Check dropped requirements"
-  assert_file_contains "transcript has heading" "$CCF_TEST_STDIN" "## Transcript"
-  assert_file_contains "transcript includes file content" "$CCF_TEST_STDIN" "original requirement"
+  assert_file_contains "transcript includes prompt" "$FABLE_ADVISOR_TEST_STDIN" "Check dropped requirements"
+  assert_file_contains "transcript has heading" "$FABLE_ADVISOR_TEST_STDIN" "## Transcript"
+  assert_file_contains "transcript includes file content" "$FABLE_ADVISOR_TEST_STDIN" "original requirement"
 }
 
 test_model_and_effort_flags_override_defaults() {
   reset_fake_claude
-  output=$("$repo_dir/bin/ccf" --model claude-fable-5 --effort high "Check cost")
+  output=$("$repo_dir/bin/fable-advisor" --model claude-fable-5 --effort high "Check cost")
   assert_eq "flag overrides return claude output" "fake-advice" "$output"
-  assert_arg_value "model flag is passed" "$CCF_TEST_ARGS" "--model" "claude-fable-5"
-  assert_arg_value "effort flag is passed" "$CCF_TEST_ARGS" "--effort" "high"
+  assert_arg_value "model flag is passed" "$FABLE_ADVISOR_TEST_ARGS" "--model" "claude-fable-5"
+  assert_arg_value "effort flag is passed" "$FABLE_ADVISOR_TEST_ARGS" "--effort" "high"
 }
 
 test_model_and_effort_env_override_defaults() {
   reset_fake_claude
-  CC_ADVISOR_MODEL=test-model CC_ADVISOR_EFFORT=low "$repo_dir/bin/ccf" "Check env" >/dev/null
-  assert_arg_value "model env is passed" "$CCF_TEST_ARGS" "--model" "test-model"
-  assert_arg_value "effort env is passed" "$CCF_TEST_ARGS" "--effort" "low"
+  FABLE_ADVISOR_MODEL=test-model FABLE_ADVISOR_EFFORT=low "$repo_dir/bin/fable-advisor" "Check env" >/dev/null
+  assert_arg_value "model env is passed" "$FABLE_ADVISOR_TEST_ARGS" "--model" "test-model"
+  assert_arg_value "effort env is passed" "$FABLE_ADVISOR_TEST_ARGS" "--effort" "low"
 }
 
 test_fish_secret_file_supplies_anthropic_api_key() {
   reset_fake_claude
   mkdir -p "$HOME/.config/fish/conf.d"
   printf 'set -gx ANTHROPIC_API_KEY fake_test_key\n' > "$HOME/.config/fish/conf.d/secrets.fish"
-  env -u ANTHROPIC_API_KEY "$repo_dir/bin/ccf" "Check key" >/dev/null
-  assert_eq "fish secret supplies api key" "fake_test_key" "$(cat "$CCF_TEST_KEY")"
+  env -u ANTHROPIC_API_KEY "$repo_dir/bin/fable-advisor" "Check key" >/dev/null
+  assert_eq "fish secret supplies api key" "fake_test_key" "$(cat "$FABLE_ADVISOR_TEST_KEY")"
 }
 
 test_custom_secret_file_supplies_anthropic_api_key() {
   reset_fake_claude
   custom_secret="$tmp_dir/custom-secrets.fish"
   printf 'set -gx ANTHROPIC_API_KEY custom_test_key\n' > "$custom_secret"
-  env -u ANTHROPIC_API_KEY CCF_SECRETS_FILE="$custom_secret" "$repo_dir/bin/ccf" "Check custom key" >/dev/null
-  assert_eq "custom secret file supplies api key" "custom_test_key" "$(cat "$CCF_TEST_KEY")"
+  env -u ANTHROPIC_API_KEY FABLE_ADVISOR_SECRETS_FILE="$custom_secret" "$repo_dir/bin/fable-advisor" "Check custom key" >/dev/null
+  assert_eq "custom secret file supplies api key" "custom_test_key" "$(cat "$FABLE_ADVISOR_TEST_KEY")"
 }
 
 test_empty_request_exits_before_calling_claude() {
   reset_fake_claude
-  if "$repo_dir/bin/ccf" > "$tmp_dir/empty-out" 2> "$tmp_dir/empty-err"; then
+  if "$repo_dir/bin/fable-advisor" > "$tmp_dir/empty-out" 2> "$tmp_dir/empty-err"; then
     fail "empty request exits nonzero"
   else
     status=$?
     assert_eq "empty request exits with usage status" "2" "$status"
   fi
-  assert_file_contains "empty request prints usage" "$tmp_dir/empty-err" "Usage: ccf"
-  assert_eq "empty request does not call claude" "" "$(cat "$CCF_TEST_ARGS")"
+  assert_file_contains "empty request prints usage" "$tmp_dir/empty-err" "Usage: fable-advisor"
+  assert_eq "empty request does not call claude" "" "$(cat "$FABLE_ADVISOR_TEST_ARGS")"
 }
 
 test_missing_transcript_exits_before_calling_claude() {
   reset_fake_claude
   missing="$tmp_dir/missing-session.jsonl"
-  if "$repo_dir/bin/ccf" --transcript "$missing" "Check transcript" > "$tmp_dir/missing-transcript-out" 2> "$tmp_dir/missing-transcript-err"; then
+  if "$repo_dir/bin/fable-advisor" --transcript "$missing" "Check transcript" > "$tmp_dir/missing-transcript-out" 2> "$tmp_dir/missing-transcript-err"; then
     fail "missing transcript exits nonzero"
   else
     status=$?
     assert_eq "missing transcript exits with usage status" "2" "$status"
   fi
   assert_file_contains "missing transcript prints readable error" "$tmp_dir/missing-transcript-err" "cannot read transcript"
-  assert_eq "missing transcript does not call claude" "" "$(cat "$CCF_TEST_ARGS")"
+  assert_eq "missing transcript does not call claude" "" "$(cat "$FABLE_ADVISOR_TEST_ARGS")"
 }
 
 test_help_prints_usage_without_calling_claude() {
   reset_fake_claude
-  output=$("$repo_dir/bin/ccf" --help 2>&1)
-  assert_contains "help includes usage" "$output" "Usage: ccf"
-  assert_eq "help does not call claude" "" "$(cat "$CCF_TEST_ARGS")"
+  output=$("$repo_dir/bin/fable-advisor" --help 2>&1)
+  assert_contains "help includes usage" "$output" "Usage: fable-advisor"
+  assert_eq "help does not call claude" "" "$(cat "$FABLE_ADVISOR_TEST_ARGS")"
 }
 
 test_installer_copies_cli_and_skill_to_configurable_locations() {
   install_prefix="$tmp_dir/install-prefix"
   skills_dir="$tmp_dir/skills"
   PREFIX="$install_prefix" SKILLS_DIR="$skills_dir" sh "$repo_dir/install.sh" > "$tmp_dir/install-out"
-  assert_eq "installer copies ccf" "yes" "$(test -x "$install_prefix/bin/ccf" && printf yes || printf no)"
+  assert_eq "installer copies fable-advisor" "yes" "$(test -x "$install_prefix/bin/fable-advisor" && printf yes || printf no)"
   assert_eq "installer copies skill" "yes" "$(test -f "$skills_dir/fable-advisor/SKILL.md" && printf yes || printf no)"
   assert_eq "installer copies openai metadata" "yes" "$(test -f "$skills_dir/fable-advisor/agents/openai.yaml" && printf yes || printf no)"
   assert_file_contains "installer prints agents hint" "$tmp_dir/install-out" '$fable-advisor'

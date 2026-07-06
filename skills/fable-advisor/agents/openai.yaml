@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fable Advisor"
+  short_description: "Claude Fable second-opinion workflow"
+  default_prompt: "Use $fable-advisor to stress-test this plan before implementation."

@@ -1,0 +1,140 @@
+#!/bin/sh
+set -eu
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "ccf: claude CLI not found" >&2
+  exit 127
+fi
+
+secrets_file=${CCF_SECRETS_FILE:-"$HOME/.config/fish/conf.d/secrets.fish"}
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -r "$secrets_file" ]; then
+  anthropic_api_key=$(
+    awk '
+      $1 == "set" {
+        for (i = 2; i <= NF; i++) {
+          if ($i == "ANTHROPIC_API_KEY" && (i + 1) <= NF) {
+            print $(i + 1)
+            exit
+          }
+        }
+      }
+    ' "$secrets_file"
+  )
+  if [ -n "$anthropic_api_key" ]; then
+    export ANTHROPIC_API_KEY=$anthropic_api_key
+  fi
+  unset anthropic_api_key
+fi
+unset secrets_file
+
+model="${CC_ADVISOR_MODEL:-claude-fable-5}"
+effort="${CC_ADVISOR_EFFORT:-xhigh}"
+advisor_prompt="You are Claude Fable 5 acting as an independent advisor for a Codex coding agent. Be skeptical and concise. Focus on correctness risks, hidden assumptions, missing verification, security/privacy issues, and simpler alternatives. Do not rewrite the whole solution unless asked; return actionable advice."
+
+usage() {
+  echo "Usage: ccf [--model MODEL] [--effort LEVEL] [--transcript FILE] <prompt>" >&2
+  echo "       command | ccf [options] <prompt>" >&2
+}
+
+transcript_file=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --transcript)
+      if [ "$#" -lt 2 ]; then
+        echo "ccf: --transcript requires a file path" >&2
+        exit 2
+      fi
+      transcript_file=$2
+      shift 2
+      ;;
+    --transcript=*)
+      transcript_file=${1#--transcript=}
+      shift
+      ;;
+    --model)
+      if [ "$#" -lt 2 ]; then
+        echo "ccf: --model requires a value" >&2
+        exit 2
+      fi
+      model=$2
+      shift 2
+      ;;
+    --model=*)
+      model=${1#--model=}
+      shift
+      ;;
+    --effort)
+      if [ "$#" -lt 2 ]; then
+        echo "ccf: --effort requires a value" >&2
+        exit 2
+      fi
+      effort=$2
+      shift 2
+      ;;
+    --effort=*)
+      effort=${1#--effort=}
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ -n "$transcript_file" ] && [ ! -r "$transcript_file" ]; then
+  echo "ccf: cannot read transcript: $transcript_file" >&2
+  exit 2
+fi
+
+prompt="$*"
+input=""
+if [ ! -t 0 ]; then
+  input=$(cat)
+fi
+transcript=""
+if [ -n "$transcript_file" ]; then
+  transcript=$(cat "$transcript_file")
+fi
+
+if [ -z "$prompt" ] && [ -z "$input" ] && [ -z "$transcript" ]; then
+  usage
+  exit 2
+fi
+
+run_claude() {
+  claude \
+    --bare \
+    --setting-sources local \
+    --model "$model" \
+    --effort "$effort" \
+    --tools "" \
+    --no-session-persistence \
+    --prompt-suggestions false \
+    --system-prompt "$advisor_prompt" \
+    "$@"
+}
+
+if [ -z "$input" ] && [ -z "$transcript" ]; then
+  run_claude --print "$prompt"
+  exit $?
+fi
+
+{
+  if [ -n "$prompt" ]; then
+    printf "%s\n\n" "$prompt"
+  fi
+  if [ -n "$input" ]; then
+    printf "## Context\n\n%s\n\n" "$input"
+  fi
+  if [ -n "$transcript" ]; then
+    printf "## Transcript\n\n%s\n" "$transcript"
+  fi
+} | run_claude --print

@@ -81,13 +81,22 @@ effort="${FABLE_ADVISOR_EFFORT:-xhigh}"
 advisor_prompt="You are Claude Fable 5 acting as an independent advisor for a coding agent. Be skeptical and concise. Focus on correctness risks, hidden assumptions, missing verification, security/privacy issues, and simpler alternatives. Do not rewrite the whole solution unless asked; return actionable advice."
 
 usage() {
-  echo "Usage: fable-advisor [--model MODEL] [--effort LEVEL] [--transcript FILE] <prompt>" >&2
-  echo "       command | fable-advisor [options] <prompt>" >&2
+  echo "Usage: fable-advisor [--model MODEL] [--effort LEVEL] [--stdin|--no-stdin] [--transcript FILE] <prompt>" >&2
+  echo "       command | fable-advisor --stdin [options] <prompt>" >&2
 }
 
 transcript_file=""
+stdin_mode="auto"
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --stdin)
+      stdin_mode="always"
+      shift
+      ;;
+    --no-stdin)
+      stdin_mode="never"
+      shift
+      ;;
     --transcript)
       if [ "$#" -lt 2 ]; then
         echo "fable-advisor: --transcript requires a file path" >&2
@@ -145,9 +154,19 @@ fi
 
 prompt="$*"
 input=""
-if [ ! -t 0 ]; then
-  input=$(cat)
-fi
+case "$stdin_mode" in
+  always)
+    input=$(cat)
+    ;;
+  never)
+    ;;
+  auto)
+    if [ ! -t 0 ]; then
+      input=$(cat)
+    fi
+    ;;
+esac
+unset stdin_mode
 transcript=""
 if [ -n "$transcript_file" ]; then
   transcript=$(cat "$transcript_file")
@@ -178,7 +197,7 @@ run_claude() {
 }
 
 if [ -z "$input" ] && [ -z "$transcript" ]; then
-  run_claude --print "$prompt"
+  run_claude --print "$prompt" < /dev/null
   exit $?
 fi
 

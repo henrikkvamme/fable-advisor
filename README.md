@@ -52,9 +52,9 @@ SKILLS_DIR="$HOME/.config/opencode/skills" sh install.sh
 ## Usage
 
 ```sh
-fable-advisor "Stress-test this plan."
-git diff | fable-advisor "Review this diff for correctness risks."
-fable-advisor --transcript session.jsonl "Check for dropped requirements."
+fable-advisor --no-stdin "Stress-test this plan."
+git diff | fable-advisor --stdin "Review this diff for correctness risks."
+fable-advisor --no-stdin --transcript session.jsonl "Check for dropped requirements."
 ```
 
 Useful overrides:

@@ -22,10 +22,14 @@ Use `fable-advisor` as a stateless Claude Fable 5 advisor, not as an implementer
    - Ask for risks, missing checks, false assumptions, and simpler alternatives.
 
 3. Run `fable-advisor`:
-   - Plan: `fable-advisor "Stress-test this plan. Focus on hidden assumptions, missing verification, and simpler alternatives: ..."`
-   - Failure: `fable-advisor "Diagnose why this loop is not converging. Suggest the next discriminating check: ..."`
-   - Diff: `git diff | fable-advisor "Review this diff for correctness risks, security/privacy issues, and missing tests."`
-   - Done: `fable-advisor "Challenge this completion claim. What would still make it false? ..."`
+   - Plan: `fable-advisor --no-stdin "Stress-test this plan. Focus on hidden assumptions, missing verification, and simpler alternatives: ..."`
+   - Failure: `fable-advisor --no-stdin "Diagnose why this loop is not converging. Suggest the next discriminating check: ..."`
+   - Diff: `git diff | fable-advisor --stdin "Review this diff for correctness risks, security/privacy issues, and missing tests."`
+   - Done: `fable-advisor --no-stdin "Challenge this completion claim. What would still make it false? ..."`
+
+Use `--no-stdin` for prompt-only calls from Codex tools. Some non-interactive shells keep stdin open even when no pipe was intended, and explicit `--no-stdin` prevents the CLI from waiting for context that will never arrive. Use `--stdin` whenever context is intentionally piped.
+
+If the CLI returns `API Error: Unable to connect to API (ConnectionRefused)` inside a sandboxed Codex session, rerun the same advisor command with network escalation. If the packet contains private repo, VPS, or secret-adjacent details, sanitize it first or ask the user before sending it to the external advisor.
 
 4. Integrate the advice:
    - Treat advisor output as advice, not authority.
@@ -37,7 +41,7 @@ Use `fable-advisor` as a stateless Claude Fable 5 advisor, not as an implementer
 Use a transcript only when a concrete current transcript file is known and the full history is likely to matter more than a compact packet. Prefer excerpts or summaries when possible.
 
 ```bash
-fable-advisor --transcript /path/to/session.jsonl "Review this session before I finalize. Focus on contradictions, dropped requirements, and unverified claims."
+fable-advisor --no-stdin --transcript /path/to/session.jsonl "Review this session before I finalize. Focus on contradictions, dropped requirements, and unverified claims."
 ```
 
 Do not search broadly through agent session directories during normal work. If no reliable current transcript path is available, make the compact advisor packet from the visible conversation and local artifacts instead.

@@ -120,11 +120,19 @@ test_plain_prompt_uses_stateless_advisor_defaults() {
 
 test_piped_context_is_sent_with_prompt() {
   reset_fake_claude
-  output=$(printf "diff --git a/app b/app\n+fixed bug\n" | "$repo_dir/bin/fable-advisor" "Review this diff")
+  output=$(printf "diff --git a/app b/app\n+fixed bug\n" | "$repo_dir/bin/fable-advisor" --stdin "Review this diff")
   assert_eq "piped context returns claude output" "fake-advice" "$output"
   assert_file_contains "piped context includes prompt" "$FABLE_ADVISOR_TEST_STDIN" "Review this diff"
   assert_file_contains "piped context has context heading" "$FABLE_ADVISOR_TEST_STDIN" "## Context"
   assert_file_contains "piped context includes stdin" "$FABLE_ADVISOR_TEST_STDIN" "+fixed bug"
+}
+
+test_no_stdin_ignores_available_stdin() {
+  reset_fake_claude
+  output=$(printf "this should be ignored\n" | "$repo_dir/bin/fable-advisor" --no-stdin "Review without pipe")
+  assert_eq "no stdin returns claude output" "fake-advice" "$output"
+  assert_file_contains "no stdin passes prompt as argument" "$FABLE_ADVISOR_TEST_ARGS" "Review without pipe"
+  assert_eq "no stdin leaves claude stdin empty" "" "$(cat "$FABLE_ADVISOR_TEST_STDIN")"
 }
 
 test_transcript_file_is_included_explicitly() {
@@ -239,6 +247,7 @@ test_installer_copies_cli_and_skill_to_configurable_locations() {
 
 test_plain_prompt_uses_stateless_advisor_defaults
 test_piped_context_is_sent_with_prompt
+test_no_stdin_ignores_available_stdin
 test_transcript_file_is_included_explicitly
 test_model_and_effort_flags_override_defaults
 test_model_and_effort_env_override_defaults

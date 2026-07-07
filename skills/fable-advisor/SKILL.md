@@ -27,7 +27,7 @@ Use `fable-advisor` as a stateless Claude Fable 5 advisor, not as an implementer
    - Diff: `git diff | fable-advisor --stdin "Review this diff for correctness risks, security/privacy issues, and missing tests."`
    - Done: `fable-advisor --no-stdin "Challenge this completion claim. What would still make it false? ..."`
 
-Use `--no-stdin` for prompt-only calls from Codex tools. Some non-interactive shells keep stdin open even when no pipe was intended, and explicit `--no-stdin` prevents the CLI from waiting for context that will never arrive. Use `--stdin` whenever context is intentionally piped.
+The CLI does not read stdin unless `--stdin` is provided. Use `--stdin` whenever context is intentionally piped. `--no-stdin` is accepted for prompt-only calls, but plain prompt-only invocations are also safe.
 
 If the CLI returns `API Error: Unable to connect to API (ConnectionRefused)` inside a sandboxed Codex session, rerun the same advisor command with network escalation. If the packet contains private repo, VPS, or secret-adjacent details, sanitize it first or ask the user before sending it to the external advisor.
 

@@ -81,20 +81,28 @@ effort="${FABLE_ADVISOR_EFFORT:-xhigh}"
 advisor_prompt="You are Claude Fable 5 acting as an independent advisor for a coding agent. Be skeptical and concise. Focus on correctness risks, hidden assumptions, missing verification, security/privacy issues, and simpler alternatives. Do not rewrite the whole solution unless asked; return actionable advice."
 
 usage() {
-  echo "Usage: fable-advisor [--model MODEL] [--effort LEVEL] [--stdin|--no-stdin] [--transcript FILE] <prompt>" >&2
+  echo "Usage: fable-advisor [--model MODEL] [--effort LEVEL] [--stdin] [--transcript FILE] <prompt>" >&2
   echo "       command | fable-advisor --stdin [options] <prompt>" >&2
 }
 
 transcript_file=""
-stdin_mode="auto"
+stdin_mode="never"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --stdin)
+      if [ "$stdin_mode" = "never-explicit" ]; then
+        echo "fable-advisor: --stdin and --no-stdin cannot be combined" >&2
+        exit 2
+      fi
       stdin_mode="always"
       shift
       ;;
     --no-stdin)
-      stdin_mode="never"
+      if [ "$stdin_mode" = "always" ]; then
+        echo "fable-advisor: --stdin and --no-stdin cannot be combined" >&2
+        exit 2
+      fi
+      stdin_mode="never-explicit"
       shift
       ;;
     --transcript)
@@ -156,14 +164,13 @@ prompt="$*"
 input=""
 case "$stdin_mode" in
   always)
+    if [ -t 0 ]; then
+      echo "fable-advisor: --stdin requires piped input" >&2
+      exit 2
+    fi
     input=$(cat)
     ;;
-  never)
-    ;;
-  auto)
-    if [ ! -t 0 ]; then
-      input=$(cat)
-    fi
+  never|never-explicit)
     ;;
 esac
 unset stdin_mode

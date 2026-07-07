@@ -127,12 +127,32 @@ test_piped_context_is_sent_with_prompt() {
   assert_file_contains "piped context includes stdin" "$FABLE_ADVISOR_TEST_STDIN" "+fixed bug"
 }
 
+test_piped_context_requires_stdin_flag() {
+  reset_fake_claude
+  output=$(printf "this should be ignored\n" | "$repo_dir/bin/fable-advisor" "Review default stdin behavior")
+  assert_eq "default stdin behavior returns claude output" "fake-advice" "$output"
+  assert_file_contains "default stdin behavior passes prompt as argument" "$FABLE_ADVISOR_TEST_ARGS" "Review default stdin behavior"
+  assert_eq "default stdin behavior leaves claude stdin empty" "" "$(cat "$FABLE_ADVISOR_TEST_STDIN")"
+}
+
 test_no_stdin_ignores_available_stdin() {
   reset_fake_claude
   output=$(printf "this should be ignored\n" | "$repo_dir/bin/fable-advisor" --no-stdin "Review without pipe")
   assert_eq "no stdin returns claude output" "fake-advice" "$output"
   assert_file_contains "no stdin passes prompt as argument" "$FABLE_ADVISOR_TEST_ARGS" "Review without pipe"
   assert_eq "no stdin leaves claude stdin empty" "" "$(cat "$FABLE_ADVISOR_TEST_STDIN")"
+}
+
+test_stdin_flag_conflict_exits_before_calling_claude() {
+  reset_fake_claude
+  if "$repo_dir/bin/fable-advisor" --stdin --no-stdin "Check conflict" > "$tmp_dir/conflict-out" 2> "$tmp_dir/conflict-err"; then
+    fail "stdin flag conflict exits nonzero"
+  else
+    status=$?
+    assert_eq "stdin flag conflict exits with usage status" "2" "$status"
+  fi
+  assert_file_contains "stdin flag conflict prints readable error" "$tmp_dir/conflict-err" "cannot be combined"
+  assert_eq "stdin flag conflict does not call claude" "" "$(cat "$FABLE_ADVISOR_TEST_ARGS")"
 }
 
 test_transcript_file_is_included_explicitly() {
@@ -247,7 +267,9 @@ test_installer_copies_cli_and_skill_to_configurable_locations() {
 
 test_plain_prompt_uses_stateless_advisor_defaults
 test_piped_context_is_sent_with_prompt
+test_piped_context_requires_stdin_flag
 test_no_stdin_ignores_available_stdin
+test_stdin_flag_conflict_exits_before_calling_claude
 test_transcript_file_is_included_explicitly
 test_model_and_effort_flags_override_defaults
 test_model_and_effort_env_override_defaults
